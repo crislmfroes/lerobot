@@ -37,6 +37,7 @@ from .configuration_eo1 import EO1Config
 if TYPE_CHECKING or _transformers_available:
     from transformers.activations import ACT2FN
     from transformers.models.qwen2_5_vl import Qwen2_5_VLForConditionalGeneration
+    from transformers.models import AutoModelForImageTextToText
     from transformers.utils import torch_compilable_check
 else:
     ACT2FN = None
@@ -71,17 +72,19 @@ class EO1Policy(PreTrainedPolicy):
 
         if config.pretrained_path is None:
             # Initialize from pretrained VLM
-            vlm_backbone = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+            vlm_backbone = AutoModelForImageTextToText.from_pretrained(
                 config.vlm_base,
                 dtype=config.dtype,
                 attn_implementation=config.attn_implementation,
             )
         else:
-            vlm_backbone = Qwen2_5_VLForConditionalGeneration._from_config(
-                config.vlm_backbone_config,
-                dtype=config.vlm_backbone_config.dtype if config.dtype == "auto" else config.dtype,
+            vlm_backbone = AutoModelForImageTextToText.from_pretrained(
+                config.vlm_base,
+                dtype=config.dtype,
+                attn_implementation=config.attn_implementation,
             )
-
+        #for param in vlm_backbone.parameters():
+        #    param.requires_grad = False
         self.model = EO1VisionFlowMatchingModel(config, vlm_backbone)
         if config.gradient_checkpointing:
             self.model.gradient_checkpointing_enable()
@@ -464,7 +467,7 @@ class EO1VisionFlowMatchingModel(nn.Module):
             mm_token_type_ids: torch.IntTensor | None,
         ) -> torch.FloatTensor:
             outputs = self.vlm_backbone.model(
-                input_ids=input_ids,
+                #input_ids=input_ids,
                 attention_mask=attention_mask,
                 inputs_embeds=inputs_embeds,
                 pixel_values=pixel_values,
@@ -572,7 +575,7 @@ class EO1VisionFlowMatchingModel(nn.Module):
         position_ids = position_ids.to(device)
 
         outputs = self.vlm_backbone.model(
-            input_ids=input_ids[:, :act_start],
+            #input_ids=input_ids[:, :act_start],
             attention_mask=attention_mask[:, :act_start],
             position_ids=position_ids[..., :act_start],
             inputs_embeds=inputs_embeds[:, :act_start],

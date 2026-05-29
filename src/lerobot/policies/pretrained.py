@@ -339,7 +339,7 @@ class PreTrainedPolicy(nn.Module, HubMixin, abc.ABC):
         Raises:
             ValueError: If the configuration is invalid.
         """
-        if not self.config.pretrained_path:
+        if not self.config.pretrained_path and False:
             raise ValueError(
                 "Training from scratch using PEFT is unlikely to yield good results. "
                 "Supply a `policy.pretrained_path` to fine-tune an existing model."

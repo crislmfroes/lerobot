@@ -46,7 +46,7 @@ from lerobot.utils.import_utils import _transformers_available, require_package
 from .configuration_eo1 import EO1Config
 
 if TYPE_CHECKING or _transformers_available:
-    from transformers.models.qwen2_5_vl import Qwen2_5_VLProcessor
+    from transformers.models import Qwen2_5_VLProcessor, AutoProcessor
 else:
     Qwen2_5_VLProcessor = None
 
@@ -166,18 +166,18 @@ class EO1ConversationTemplateStep(ComplementaryDataProcessorStep):
 @dataclass
 @ProcessorStepRegistry.register(name="eo1_qwen_processor")
 class EO1QwenProcessorStep(ComplementaryDataProcessorStep):
-    processor_name: str = "Qwen/Qwen2.5-VL-3B-Instruct"
+    processor_name: str = "Qwen/Qwen3.5-4B"
     image_min_pixels: int | None = 64 * 28 * 28
     image_max_pixels: int | None = 128 * 28 * 28
     use_fast_processor: bool = False
 
-    _processor: Qwen2_5_VLProcessor | None = field(default=None, init=False, repr=False)
+    _processor: AutoProcessor | None = field(default=None, init=False, repr=False)
     _state_token_id: int | None = field(default=None, init=False, repr=False)
     _action_token_id: int | None = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
         require_package("transformers", extra="eo1")
-        self._processor = Qwen2_5_VLProcessor.from_pretrained(
+        self._processor = AutoProcessor.from_pretrained(
             self.processor_name,
             use_fast=self.use_fast_processor,
         )
@@ -196,11 +196,13 @@ class EO1QwenProcessorStep(ComplementaryDataProcessorStep):
 
         inputs = self._processor.apply_chat_template(
             messages,
+            processor_kwargs=dict(
+                padding=True,
+                padding_side=padding_side,
+                min_pixels=self.image_min_pixels,
+                max_pixels=self.image_max_pixels,
+            ),
             tokenize=True,
-            padding=True,
-            padding_side=padding_side,
-            min_pixels=self.image_min_pixels,
-            max_pixels=self.image_max_pixels,
             add_generation_prompt=False,
             return_dict=True,
             return_tensors="pt",
